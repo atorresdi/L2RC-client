@@ -36,28 +36,14 @@ int main()
 
     Command cmd;
     Response rpse;
+    Package pkg;
 
-    for (int j = 0; j <= 15; j++)
-    {
-        for (int i = j*16; i <= ((j+1)*16 - 1); i++)
-        {
-            cmd.Set(vcp_test_var[i]);
-            cmd.Send();
-        }
+    pkg.Set_Attributes(256, 100, vcp_test_var);
+    pkg.Set_Opts_Field(1,5,1);
+    pkg.Send();
 
-        int rx_count = 0;
-
-        while (rx_count < 16)
-        {
-            rpse.Wait();
-            if (rpse.Get_Type() == PROT_CMD)
-                cout << "#" << (int)(rpse.Get_Data());
-
-            rx_count++;
-        }
-    }
-
-    cout << endl;
+    pkg.Set_Attributes(53, 100, vcp_test_var);
+    pkg.Send();
 
     return 0;
 }

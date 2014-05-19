@@ -17,6 +17,22 @@ public:
     void Set(uint8_t cmd);
 };
 
+class Package
+{
+private:
+    uint16_t length;
+    uint8_t opts;
+    uint8_t ptsf;
+    uint8_t *data;
+    void Print_Error();
+    void Print_Warning();
+
+public:
+    bool Set_Attributes(uint16_t d_length, uint8_t p_ptsf, uint8_t *p_data);
+    bool Set_Opts_Field(uint8_t pkg_type, uint8_t device, uint8_t data_size);
+    bool Send();
+};
+
 class Response
 {
 private:
