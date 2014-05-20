@@ -54,6 +54,15 @@ void Command::Set(uint8_t cmd)
 
 /* class: Package ------------------------------------ */
 
+Package::Package() : new_data_flag(0), length(0), data(0) {}
+
+Package::~Package()
+{
+    if (new_data_flag)
+        delete[] data;
+}
+
+
 bool Package::Set_Attributes(uint16_t d_length, uint8_t p_ptsf, uint8_t *p_data)
 {
     if ( (d_length > 0) ||  (d_length <= 256) )
@@ -111,10 +120,40 @@ void Package::Print_Warning()
     cout << "WARNING: Package::Send: Character received other than SYN" << endl;
 }
 
+uint8_t Package::Get_Cksum()
+{
+    uint8_t cksum = 0;
+
+    if (length < 256)
+        cksum += length;
+
+    cksum += opts + ptsf;
+
+    for (int i = 0; i < length; i++)
+        cksum += data[i];
+
+    return cksum;
+}
+
+void Package::New_Data()
+{
+    if (length)
+    {
+        if (new_data_flag)
+            delete[] data;
+
+        data = new uint8_t[length];
+        new_data_flag = 1;
+    }
+}
+
 bool Package::Send()
 {
     uint8_t cksum = 0;
     uint8_t reply;
+
+    if (!data)
+        return 0;
 
     /* calculate checksum */
     cksum = length + opts + ptsf;
@@ -203,28 +242,86 @@ void Response::Wait()
 
     while (!valid_reponse)
     {
-        uint8_t tmp_data;
+        uint8_t rx_data;
 
-        while ( vcp.Read(&tmp_data) <= 0 ) {};
+        /* wait for start character: # or SOH */
+        while ( vcp.Read(&rx_data) <= 0 ) {};
 
-        if (tmp_data == '#')
+        if (rx_data == '#')        /* Command */
         {
-            uint8_t cmd;
-
+            /* wait for the command and its complement */
             while ( vcp.Read(&cmd) <= 0 ) {};
-            while ( vcp.Read(&tmp_data) <= 0 ) {};
+            while ( vcp.Read(&rx_data) <= 0 ) {};
 
-            tmp_data = ~tmp_data;
-
-            if (cmd == tmp_data)
+            rx_data = ~rx_data;
+            if (cmd == rx_data)
             {
                 type = PROT_CMD;
-                data = cmd;
                 valid_reponse = 1;
 
-                vcp.Write(ACK);
+                vcp.Write(ACK);         /* send ACK */
             };
+        }
+        else if (rx_data == SOH)       /* Package Start Of Header */
+        {
+            /* wait for the package secuence num */
+            while ( vcp.Read(&rx_data) <= 0 ) {};
+
+            if ( rx_data == pkg_sec_num )
+            {
+                vcp.Write(SYN);             /* send sync character */
+
+                /* Wait for the package length */
+                while ( vcp.Read(&rx_data) <= 0 ) {};
+
+                if (!rx_data)           /* a 256 length is represented by zero */
+                    pkg.length = 256;
+                else
+                    pkg.length = rx_data;
+
+                pkg.New_Data();             /* Create the data buffer after storing package length */
+
+                /* Wait for the package options */
+                while ( vcp.Read(&pkg.opts) <= 0 ) {};
+
+                /* Wait for the Package Type Specific Field  */
+                while ( vcp.Read(&pkg.ptsf) <= 0 ) {};
+
+                vcp.Write(SYN);             /* send FIRST sync character */
+
+                /* Wait for the package data */
+                for (int i = 0; i < pkg.length; )
+                {
+                    while ( vcp.Read(&pkg.data[i]) <= 0 ) {};
+                    i++;
+
+                    if (i >= MAX_CONSEC_RX_BYTES)
+                    {
+                        if ( (!(i % MAX_CONSEC_RX_BYTES)) && (i < pkg.length) )
+                            vcp.Write(SYN);             /* send SECOND sync character */
+                    };
+                };
+
+                vcp.Write(SYN);             /* send THIRD sync character */
+
+                /* Wait for the package checksum */
+                while ( vcp.Read(&rx_data) <= 0 ) {};
+                cout << "cksum " << (int)pkg.Get_Cksum() << endl;
+                if (pkg.Get_Cksum() == rx_data)
+                {
+                    vcp.Write(ACK);         /* send ACK */      cout << "ACK sent" << endl;
+                    type = PROT_PKG;
+                    pkg_sec_num++;
+                    valid_reponse = 1;
+                }
+                else
+                    vcp.Write(NAK);         /* send NAK: incorrect package checksum */
+            }
+            else
+                vcp.Write(NAK);         /* send NAK: incorrect package secuence num */
+
         };
+
     };
 }
 
@@ -233,9 +330,9 @@ uint8_t Response::Get_Type()
     return type;
 }
 
-uint8_t Response::Get_Data()
+uint8_t Response::Get_Cmd()
 {
-    return data;
+    return cmd;
 }
 
 /* -------------------------------------class: Response */

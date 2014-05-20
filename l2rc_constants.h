@@ -17,5 +17,6 @@ const uint8_t PROT_PKG = 2;
 
 /* Max consecutive sent bytes */
 const uint8_t MAX_CONSEC_SENT_BYTES = 16;
+const uint8_t MAX_CONSEC_RX_BYTES = 32;
 
 #endif // L2RC_CONSTANTS_H

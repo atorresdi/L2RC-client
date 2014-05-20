@@ -32,7 +32,7 @@ Virtual_COM_Port vcp(&vc_port);
 int main()
 {
     /* Virtual COM port initialization */
-    vcp.Open(std::string("/dev/ttyACM0"));
+    vcp.Open(std::string("/dev/ttyACM0"));          cout << "vcp_open" << endl;
 
     Command cmd;
     Response rpse;
@@ -44,6 +44,39 @@ int main()
 
     pkg.Set_Attributes(53, 100, vcp_test_var);
     pkg.Send();
+
+    rpse.Wait();
+
+    if (rpse.Get_Type() == PROT_PKG)
+    {
+        cout << "length " << (int)rpse.pkg.length << endl;
+        cout << "opts " << (int)rpse.pkg.opts << endl;
+        cout << "ptsf " << (int)rpse.pkg.ptsf << endl;
+        cout << "data" << endl;
+
+        for (int i = 0; i < rpse.pkg.length; i++)
+            cout << (int)rpse.pkg.data[i] << " ";
+
+        cout << endl;
+    }
+
+    rpse.Wait();
+
+    if (rpse.Get_Type() == PROT_PKG)
+    {
+        cout << "length " << (int)rpse.pkg.length << endl;
+        cout << "opts " << (int)rpse.pkg.opts << endl;
+        cout << "ptsf " << (int)rpse.pkg.ptsf << endl;
+        cout << "data" << endl;
+
+        for (int i = 0; i < rpse.pkg.length; i++)
+            cout << (int)rpse.pkg.data[i] << " ";
+
+        cout << endl;
+    }
+
+
+    vcp.Close();
 
     return 0;
 }
