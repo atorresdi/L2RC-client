@@ -1,6 +1,8 @@
 #include "timing.h"
 #include "usb_vcp.h"
 #include "protocol.h"
+#include "rdsqr_client.h"
+
 #include "l2rc_constants.h"
 
 #include <iostream>
@@ -29,54 +31,18 @@ boost::asio::io_service io_service;
 boost::asio::serial_port vc_port(io_service);
 Virtual_COM_Port vcp(&vc_port);
 
+/* Robot configuration variables */
+Robot_Configuration robot_config;
+
 int main()
 {
-    /* Virtual COM port initialization */
-    vcp.Open(std::string("/dev/ttyACM0"));          cout << "vcp_open" << endl;
+    if (!robot_config.Open_Config_File())
+        return 0;
 
-    Command cmd;
-    Response rpse;
-    Package pkg;
+    if (!robot_config.Set_Parameters())
+        return 0;
 
-    pkg.Set_Attributes(256, 100, vcp_test_var);
-    pkg.Set_Opts_Field(1,5,1);
-    pkg.Send();
-
-    pkg.Set_Attributes(53, 100, vcp_test_var);
-    pkg.Send();
-
-    rpse.Wait();
-
-    if (rpse.Get_Type() == PROT_PKG)
-    {
-        cout << "length " << (int)rpse.pkg.length << endl;
-        cout << "opts " << (int)rpse.pkg.opts << endl;
-        cout << "ptsf " << (int)rpse.pkg.ptsf << endl;
-        cout << "data" << endl;
-
-        for (int i = 0; i < rpse.pkg.length; i++)
-            cout << (int)rpse.pkg.data[i] << " ";
-
-        cout << endl;
-    }
-
-    rpse.Wait();
-
-    if (rpse.Get_Type() == PROT_PKG)
-    {
-        cout << "length " << (int)rpse.pkg.length << endl;
-        cout << "opts " << (int)rpse.pkg.opts << endl;
-        cout << "ptsf " << (int)rpse.pkg.ptsf << endl;
-        cout << "data" << endl;
-
-        for (int i = 0; i < rpse.pkg.length; i++)
-            cout << (int)rpse.pkg.data[i] << " ";
-
-        cout << endl;
-    }
-
-
-    vcp.Close();
+    robot_config.Print_Configuration();
 
     return 0;
 }
