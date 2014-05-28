@@ -45,4 +45,22 @@ const uint8_t dxl_ax_param_size[DYNAMIXEL_PARAM_NUM] = { 2 };
 /* Alphabet lowercase and underscore */
 const char alphabet_lc[] = {'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z', '_'};
 
+/* Robot Device Driver client constants */
+const uint8_t F_RDD_TOKEN = 0x01;
+
+/* Robot configuration parameters field nums */
+const uint8_t P_RDD_PERIOD              = 0;
+const uint8_t P_RDD_DEV_NUM             = 1;
+const uint8_t P_RDD_DEV_ID              = 2;
+const uint8_t P_RDD_INST_NUM            = 3;
+const uint8_t P_RDD_INST_ID             = 4;
+const uint8_t P_RDD_PARAM_WR_NUM        = 5;
+const uint8_t P_RDD_PARAM_WR_ADDR       = 6;
+const uint8_t P_RDD_PARAM_RD_NUM        = 7;
+const uint8_t P_RDD_PARAM_RD_ADDR       = 8;
+const uint8_t P_RDD_PARAM_RD_PER        = 9;
+
+/* Protocol packages types */
+const uint8_t PRO_CONFIG_PKG = 0;
+
 #endif // L2RC_CONSTANTS_H

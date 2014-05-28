@@ -31,18 +31,19 @@ boost::asio::io_service io_service;
 boost::asio::serial_port vc_port(io_service);
 Virtual_COM_Port vcp(&vc_port);
 
-/* Robot configuration variables */
-Robot_Configuration robot_config;
+/* RDsqr variables */
+RDsqr_Client rdd_client;        /* robot device driver client */
 
 int main()
 {
-    if (!robot_config.Open_Config_File())
+    /* Virtual COM port initialization */
+    vcp.Open(std::string("/dev/ttyACM0"));          cout << "vcp_open" << endl;
+
+    if (!rdd_client.Set_Up())
         return 0;
 
-    if (!robot_config.Set_Parameters())
+    if (!rdd_client.Send_Config())
         return 0;
-
-    robot_config.Print_Configuration();
 
     return 0;
 }

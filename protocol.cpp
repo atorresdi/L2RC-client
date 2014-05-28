@@ -99,8 +99,24 @@ bool Package::Set_Opts_Field(uint8_t pkg_type, uint8_t device, uint8_t data_size
         return 0;
     };
 
-    if (data_size < 4)
+    if (data_size <= 8)
+    {
+        if (data_size == 1)
+            data_size = 0;
+        else if (data_size == 2)
+            data_size = 1;
+        else if (data_size == 4)
+            data_size = 2;
+        else if (data_size == 8)
+            data_size = 3;
+        else
+        {
+            cout << "Package::Set_Opts_Field: Invalid data_size value" << endl;
+            return 0;
+        };
+
          opts |= (data_size & 0x03);
+    }
     else
     {
         cout << "Package::Set_Opts_Field: Invalid data_size value" << endl;
