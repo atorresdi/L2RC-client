@@ -5,6 +5,9 @@
 
 using namespace std;
 
+/* static variables */
+static uint8_t param_wr_data[256] = {0};
+
 /* class: Global_Parameters ------------------------------------ */
 
 Global_Parameters::Global_Parameters() : dev_num(0) { }
@@ -13,7 +16,7 @@ Global_Parameters::Global_Parameters() : dev_num(0) { }
 
 /* class: Device ------------------------------------ */
 
-Device::Device() : inst_num(0), inst_id(0), param_wr_num(0), param_wr_addr(0), param_rd_num(0), param_rd_addr(0), param_rd_per(0) { }
+Device::Device() : inst_num(0), inst_id(0), param_wr_num(0), param_wr_addr(0), param_wr_size(0), param_wr_file(0), param_rd_num(0), param_rd_addr(0), param_rd_per(0) { }
 
 Device::~Device()
 {
@@ -22,6 +25,12 @@ Device::~Device()
 
     if (param_wr_addr)
         delete[] param_wr_addr;
+
+    if (param_wr_size)
+        delete[] param_wr_size;
+
+    if (param_wr_file)
+        delete[] param_wr_file;
 
     if (param_rd_addr)
         delete[] param_rd_addr;
@@ -76,6 +85,21 @@ int8_t Robot_Configuration::Get_Param_Addr(uint8_t dev_id, std::string param_nam
     return -1;
 }
 
+int8_t Robot_Configuration::Get_Param_Size(uint8_t dev_id, uint8_t param_addr)
+{
+    if (dev_id == DXL_AX_ID)
+    {
+        for (uint8_t n = 0; n < dxl_ax_param_num; n++)
+        {
+            if (param_addr == dxl_ax_param_addr[n])
+                return dxl_ax_param_size[n];
+        };
+    };
+
+    cerr << "Err: parameter address '" << (int)param_addr << "' not supported" << endl;
+    return -1;
+}
+
 
 bool Robot_Configuration::Set_Param_Val(const std::string param_name, void *param_p)
 {
@@ -85,7 +109,7 @@ bool Robot_Configuration::Set_Param_Val(const std::string param_name, void *para
 
     /* take text line */
     while ( (!cf_line.size()) || (cf_line.find_first_not_of(" \t") == string::npos) )
-        getline(config_file, cf_line);              cout << "cf_line " << cf_line << endl;
+        getline(config_file, cf_line);
     if (config_file.eof())
     {
         cerr << "Err: parameter '" << param_name << "' could not be found" << endl;
@@ -113,18 +137,16 @@ bool Robot_Configuration::Set_Param_Val(const std::string param_name, void *para
 
         if (line_pos != string::npos)
             param_value_str += cf_line[line_pos];
-    };                                                              cout << "param_value_str " << param_value_str << endl;
+    };
     if (!param_name.compare("PERIOD") || !param_name.compare("ITERATION_NUM"))
         *((uint16_t *)param_p) = atoi(param_value_str.data());                  /* ASCII to integer */
     else
         *((uint8_t *)param_p) = atoi(param_value_str.data());                   /* ASCII to integer */
 
-    cout << "*param_p " << *((uint16_t *)param_p) << "\n" << endl;
-
     return true;
 }
 
-bool Robot_Configuration::Set_Param_Array(const std::string param_name, uint8_t *param_p, uint8_t length, uint8_t dev_id, std::ifstream  *param_wr_file_p)
+bool Robot_Configuration::Set_Param_Array(const std::string param_name, uint8_t *param_p, uint8_t length, uint8_t dev_id, std::ifstream  *param_wr_file_p, uint8_t *param_wr_size_p)
 {
     string cf_line;
     string param_value_str;         /* stores the parameter value in ASCII */
@@ -132,7 +154,7 @@ bool Robot_Configuration::Set_Param_Array(const std::string param_name, uint8_t 
 
     /* take text line */
     while ( (!cf_line.size()) || (cf_line.find_first_not_of(" \t") == string::npos) )
-        getline(config_file, cf_line);              cout << "cf_line " << cf_line << endl;
+        getline(config_file, cf_line);
     if (config_file.eof())
     {
         cerr << "Err: parameter '" << param_name << "' could not be found" << endl;
@@ -179,8 +201,8 @@ bool Robot_Configuration::Set_Param_Array(const std::string param_name, uint8_t 
             line_pos = value_end_pos + 1;
 
             param_value_str = cf_line.substr(value_start_pos, value_end_pos - value_start_pos);
-            param_p[n] = atoi(param_value_str.data());      /* ASCII to integer */              cout << "param_p[n] " << (int)(param_p[n]) << endl;
-        };               cout << endl;
+            param_p[n] = atoi(param_value_str.data());      /* ASCII to integer */
+        };
     }
     else
     {
@@ -202,16 +224,22 @@ bool Robot_Configuration::Set_Param_Array(const std::string param_name, uint8_t 
 
             line_pos = value_end_pos + 1;
 
-            param_value_str = cf_line.substr(value_start_pos, value_end_pos - value_start_pos);         cout << "param_value_str " << param_value_str << endl;
+            param_value_str = cf_line.substr(value_start_pos, value_end_pos - value_start_pos);
 
             param_addr = Get_Param_Addr(dev_id, param_value_str);
             if (param_addr < 0)
                 return false;
-            param_p[n] = param_addr;        cout << "param_p[n] " << (int)param_p[n] << endl;
+            param_p[n] = param_addr;
 
             /* open param wr files */
             if ( !param_name.compare("PARAM_WR_ID") )
             {
+                int8_t param_wr_size = Get_Param_Size( dev_id, param_addr);
+
+                if (param_wr_size < 0)
+                    return false;
+
+                param_wr_size_p[n] = param_wr_size;
                 param_wr_file_p[n].open(("./" + param_value_str).data());
 
                 if (!param_wr_file_p[n].is_open())
@@ -253,12 +281,12 @@ bool Robot_Configuration::Set_Dev_Id(uint8_t *dev_id_p)
         cerr << "Err: invalid sintax, device name not found" << endl;
         return false;
     };
-    dev_name = cf_line.substr(dev_name_start, dev_name_end - dev_name_start);       cout << "dev_name " << dev_name << endl;
+    dev_name = cf_line.substr(dev_name_start, dev_name_end - dev_name_start);
 
     dev_id = Get_Dev_Id(dev_name);
     if (dev_id < 0)
         return false;
-    *dev_id_p = dev_id;           cout << "*dev_id_p " << (int)(*dev_id_p) << endl;
+    *dev_id_p = dev_id;
 
     return true;
 }
@@ -336,8 +364,9 @@ bool Robot_Configuration::Set_Parameters()
         if (device[n].param_wr_num > 0)
         {
             device[n].param_wr_addr = new uint8_t[(device[n].param_wr_num)*(sizeof(uint8_t))];
+            device[n].param_wr_size = new uint8_t[(device[n].param_wr_num)*(sizeof(uint8_t))];
             device[n].param_wr_file = new std::ifstream[ (device[n].param_wr_num)*(sizeof(std::ifstream)) ];
-            if (!Set_Param_Array("PARAM_WR_ID", device[n].param_wr_addr, device[n].param_wr_num, device[n].dev_id, device[n].param_wr_file) )
+            if (!Set_Param_Array("PARAM_WR_ID", device[n].param_wr_addr, device[n].param_wr_num, device[n].dev_id, device[n].param_wr_file, device[n].param_wr_size ))
                 return false;
         };
         if (!Set_Param_Val("PARAM_RD_NUM", &device[n].param_rd_num))
@@ -379,19 +408,25 @@ void Robot_Configuration::Print_Configuration()
             cout << (int)device[n].inst_id[i] << " ";
         cout << endl;
         cout << "PARAM_WR_NUM\t\t" << (int)device[n].param_wr_num << endl;
-        cout << "PARAM_WR_ADDR\t\t";
-        for (uint8_t i = 0; i < device[n].param_wr_num; i++)
-            cout << (int)device[n].param_wr_addr[i] << " ";
-        cout << endl;
-        cout << "PARAM_RD_NUM\t\t" << (int)device[n].param_wr_num << endl;
-        cout << "PARAM_RD_ADDR\t\t";
-        for (uint8_t i = 0; i < device[n].param_rd_num; i++)
-            cout << (int)device[n].param_rd_addr[i] << " ";
-        cout << endl;
-        cout << "PARAM_RD_PER\t\t";
-        for (uint8_t i = 0; i < device[n].param_rd_num; i++)
-            cout << (int)device[n].param_rd_per[i] << " ";
-        cout << endl;
+        if (device[n].param_wr_num)
+        {
+            cout << "PARAM_WR_ADDR\t\t";
+            for (uint8_t i = 0; i < device[n].param_wr_num; i++)
+                cout << (int)device[n].param_wr_addr[i] << " ";
+            cout << endl;
+        };
+        cout << "PARAM_RD_NUM\t\t" << (int)device[n].param_rd_num << endl;
+        if (device[n].param_rd_num)
+        {
+            cout << "PARAM_RD_ADDR\t\t";
+            for (uint8_t i = 0; i < device[n].param_rd_num; i++)
+                cout << (int)device[n].param_rd_addr[i] << " ";
+            cout << endl;
+            cout << "PARAM_RD_PER\t\t";
+            for (uint8_t i = 0; i < device[n].param_rd_num; i++)
+                cout << (int)device[n].param_rd_per[i] << " ";
+            cout << endl;
+        };
     };
     cout << endl;
 }
@@ -439,6 +474,7 @@ bool RDsqr_Client::Set_Up()
         return false;
 
     robot_config.Print_Configuration();
+
 
     Open_Log_File();
 
@@ -500,6 +536,75 @@ bool RDsqr_Client::Send_Config()
             pkg.Send();
         };
     };
+
+    return true;
+}
+
+bool RDsqr_Client::Set_Param_Wr_Data(uint8_t dev_idx, uint8_t param_wr_idx)
+{
+    string mf_line;
+    string value_str;
+    size_t value_start = 0;
+    size_t value_end;
+    uint8_t param_wr_data_idx = 0;
+
+    /* take text line */
+    while ( (!mf_line.size()) || (mf_line.find_first_not_of(" \t") == string::npos) )
+        getline(robot_config.device[dev_idx].param_wr_file[param_wr_idx], mf_line);
+    if (robot_config.device[dev_idx].param_wr_file[param_wr_idx].eof())
+        cout << "Warning: EOF reached" << endl;
+
+    for (uint8_t n = 0; n < robot_config.device[dev_idx].inst_num; n++)
+    {
+        /* search for the param_wr value in the text line */
+        value_start = mf_line.find_first_of("-0123456789", value_start);
+        value_end = mf_line.find_first_not_of("0123456789.", value_start + 1);
+
+        if(value_end == value_start)
+        {
+            cerr << "Err: invalid matrix file, missing value" << endl;
+            return false;
+        }
+
+        value_str = mf_line.substr(value_start, value_end - value_start);       cout << "value_str " << value_str << endl;
+        value_start = value_end + 1;
+
+        /* fill param_wr_data */
+        if (robot_config.device[dev_idx].dev_id == DXL_AX_ID)
+        {
+            if ( robot_config.device[dev_idx].param_wr_addr[param_wr_idx] == dxl_ax_goal_position_addr)
+            {
+                uint16_t dxl_angle;
+                float angle = atof(value_str.data());
+
+                if ((angle < -2.617) || (angle > 2.617))
+                {
+                    cerr << "Err: invalid goal_position angle value, out of range" << endl;
+                    return false;
+                }
+
+                dxl_angle = -195.38*angle + 511.5;                       cout << "dxl_angle " << dxl_angle << endl;
+
+                *(uint16_t *)(&param_wr_data[param_wr_data_idx]) = dxl_angle;
+                cout << "param_wr_data[param_wr_data_idx] " << (int)param_wr_data[param_wr_data_idx] << endl;
+                cout << "param_wr_data[param_wr_data_idx + 1] " << (int)param_wr_data[param_wr_data_idx + 1] << endl;
+                param_wr_data_idx += robot_config.device[dev_idx].param_wr_size[param_wr_idx];
+            };
+        };
+    };
+
+    return true;
+}
+
+bool RDsqr_Client::Send_Inst_Pkg(uint8_t dev_idx, uint8_t param_wr_idx)
+{
+    uint16_t pkg_length = (robot_config.device[dev_idx].inst_num)*(robot_config.device[dev_idx].param_wr_size[param_wr_idx]);
+    uint8_t param_addr = robot_config.device[dev_idx].param_wr_addr[param_wr_idx];
+
+    /* PERIOD */
+    pkg.Set_Attributes(pkg_length , param_addr, param_wr_data);
+    pkg.Set_Opts_Field(PRO_INSTR_PKG, robot_config.device[dev_idx].dev_id, robot_config.device[dev_idx].param_wr_size[param_wr_idx]);
+    pkg.Send();
 
     return true;
 }

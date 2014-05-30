@@ -37,9 +37,10 @@ const std::string dev_names[SUPPORTED_DEVS_NUM] = { "DXL_AX" };
 const uint8_t dev_ids[SUPPORTED_DEVS_NUM] = { DXL_AX_ID };
 
 /* Dynamixel AX series parameters address */
+const uint8_t dxl_ax_goal_position_addr = 30;
 const uint8_t dxl_ax_param_num = DYNAMIXEL_PARAM_NUM;
 const std::string dxl_ax_param_name[DYNAMIXEL_PARAM_NUM] = { "goal_position" };
-const uint8_t dxl_ax_param_addr[DYNAMIXEL_PARAM_NUM] = { 30 };
+const uint8_t dxl_ax_param_addr[DYNAMIXEL_PARAM_NUM] = { dxl_ax_goal_position_addr };
 const uint8_t dxl_ax_param_size[DYNAMIXEL_PARAM_NUM] = { 2 };
 
 /* Alphabet lowercase and underscore */
@@ -62,5 +63,6 @@ const uint8_t P_RDD_PARAM_RD_PER        = 9;
 
 /* Protocol packages types */
 const uint8_t PRO_CONFIG_PKG = 0;
+const uint8_t PRO_INSTR_PKG = 1;
 
 #endif // L2RC_CONSTANTS_H

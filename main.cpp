@@ -45,5 +45,16 @@ int main()
     if (!rdd_client.Send_Config())
         return 0;
 
+    for (int dev_idx = 0; dev_idx < rdd_client.robot_config.glob_param.dev_num; dev_idx++)
+    {
+        for (int param_wr_idx = 0; param_wr_idx < rdd_client.robot_config.device[dev_idx].param_wr_num; param_wr_idx++)
+        {
+            if(!rdd_client.Set_Param_Wr_Data(dev_idx, param_wr_idx))
+                return 0;
+
+            rdd_client.Send_Inst_Pkg(dev_idx, param_wr_idx);
+        };
+    };
+
     return 0;
 }
