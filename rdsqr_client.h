@@ -66,7 +66,7 @@ private:
 
     uint8_t flags;
     uint16_t time_step_count;
-    uint16_t iteration_count;
+
     Command cmd;
     Package pkg;
     Response rpse;
@@ -79,6 +79,7 @@ public:
     ~RDsqr_Client();
     std::ofstream  log_file;
     Robot_Configuration robot_config;
+    uint16_t iteration_count;
 
     bool Set_Up();
     bool Send_Config();

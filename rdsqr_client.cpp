@@ -387,7 +387,7 @@ bool Robot_Configuration::Set_Parameters()
         };
     };
 
-    cout << "RDsquare configured!\n" << endl;
+    cout << "\nRDsquare configured!\n" << endl;
 
     return true;
 }
@@ -446,7 +446,7 @@ RDsqr_Client::~RDsqr_Client()
     if (log_file.is_open())
     {
         log_file.close();
-        cout << "file 'robot_log' closed" << endl;
+//        cout << "file 'robot_log' closed" << endl;
     };
 }
 
@@ -460,7 +460,7 @@ bool RDsqr_Client::Open_Log_File()
         return false;
     }
 
-    cout << "file 'robot_log' created" << endl;
+//    cout << "file 'robot_log' created" << endl;
 
     return true;
 }
@@ -474,7 +474,6 @@ bool RDsqr_Client::Set_Up()
         return false;
 
     robot_config.Print_Configuration();
-
 
     Open_Log_File();
 
@@ -550,9 +549,11 @@ bool RDsqr_Client::Set_Param_Wr_Data(uint8_t dev_idx, uint8_t param_wr_idx)
 
     /* take text line */
     while ( (!mf_line.size()) || (mf_line.find_first_not_of(" \t") == string::npos) )
+    {
         getline(robot_config.device[dev_idx].param_wr_file[param_wr_idx], mf_line);
-    if (robot_config.device[dev_idx].param_wr_file[param_wr_idx].eof())
-        cout << "Warning: EOF reached" << endl;
+        if (robot_config.device[dev_idx].param_wr_file[param_wr_idx].eof())
+            return false;
+    };
 
     for (uint8_t n = 0; n < robot_config.device[dev_idx].inst_num; n++)
     {
@@ -566,7 +567,7 @@ bool RDsqr_Client::Set_Param_Wr_Data(uint8_t dev_idx, uint8_t param_wr_idx)
             return false;
         }
 
-        value_str = mf_line.substr(value_start, value_end - value_start);       cout << "value_str " << value_str << endl;
+        value_str = mf_line.substr(value_start, value_end - value_start);
         value_start = value_end + 1;
 
         /* fill param_wr_data */
@@ -583,11 +584,9 @@ bool RDsqr_Client::Set_Param_Wr_Data(uint8_t dev_idx, uint8_t param_wr_idx)
                     return false;
                 }
 
-                dxl_angle = -195.38*angle + 511.5;                       cout << "dxl_angle " << dxl_angle << endl;
-
+                dxl_angle = -195.38*angle + 511.5;
                 *(uint16_t *)(&param_wr_data[param_wr_data_idx]) = dxl_angle;
-                cout << "param_wr_data[param_wr_data_idx] " << (int)param_wr_data[param_wr_data_idx] << endl;
-                cout << "param_wr_data[param_wr_data_idx + 1] " << (int)param_wr_data[param_wr_data_idx + 1] << endl;
+
                 param_wr_data_idx += robot_config.device[dev_idx].param_wr_size[param_wr_idx];
             };
         };

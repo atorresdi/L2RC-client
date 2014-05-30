@@ -13,19 +13,6 @@
 
 using namespace std;
 
-/* TEST --------------------------------------------------------------------------------------------------------------------------------- */
-unsigned char vcp_data;
-unsigned char vcp_test_var[] = {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,\
-                                36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,\
-                                69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,\
-                                102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,127,\
-                                128,129,130,131,132,133,134,135,136,137,138,139,140,141,142,143,144,145,146,147,148,149,150,151,152,153,\
-                                154,155,156,157,158,159,160,161,162,163,164,165,166,167,168,169,170,171,172,173,174,175,176,177,178,179,\
-                                180,181,182,183,184,185,186,187,188,189,190,191,192,193,194,195,196,197,198,199,200,201,202,203,204,205,\
-                                206,207,208,209,210,211,212,213,214,215,216,217,218,219,220,221,222,223,224,225,226,227,228,229,230,231,\
-                                232,233,234,235,236,237,238,239,240,241,242,243,244,245,246,247,248,249,250,251,252,253,254,255};
-/* -------------------------------------------------------------------------------------------------------------------------------------- */
-
 /* Virtual COM port variables */
 boost::asio::io_service io_service;
 boost::asio::serial_port vc_port(io_service);
@@ -36,8 +23,27 @@ RDsqr_Client rdd_client;        /* robot device driver client */
 
 int main()
 {
+    string port_path = "/dev/ttyACM";
+    char port_num = '0';
+    char user_decision;
+    cout << "default serial port is " << "/dev/ttyACM0" << ", change port num? (Y/n)";
+    cin >> user_decision;
+    if (user_decision == 'y' || user_decision == 'Y')
+    {
+        cout << "enter port number ";
+        cin >> port_num;
+        if (port_num < '0' || port_num > '9')
+        {
+            cerr << "Err: invalid port number" << endl;
+            return 0;
+        };
+    };
+
     /* Virtual COM port initialization */
-    vcp.Open(std::string("/dev/ttyACM0"));          cout << "vcp_open" << endl;
+    if (vcp.Open(port_path.append(1, port_num)))
+        cout << "port " <<  port_path << " open" << endl;
+    else
+        return 0;
 
     if (!rdd_client.Set_Up())
         return 0;
@@ -55,6 +61,41 @@ int main()
             rdd_client.Send_Inst_Pkg(dev_idx, param_wr_idx);
         };
     };
+
+    while (1)
+    {
+        for (int dev_idx = 0; dev_idx < rdd_client.robot_config.glob_param.dev_num; dev_idx++)
+        {
+            for (int param_wr_idx = 0; param_wr_idx < rdd_client.robot_config.device[dev_idx].param_wr_num; param_wr_idx++)
+            {
+                if(!rdd_client.Set_Param_Wr_Data(dev_idx, param_wr_idx))
+                {
+                    if (rdd_client.robot_config.device[dev_idx].param_wr_file[param_wr_idx].eof())
+                    {
+                        if (rdd_client.robot_config.glob_param.iteration_num)
+                        {
+                            (rdd_client.iteration_count)++;         cout << "rdd_client.iteration_count " << rdd_client.iteration_count << endl;
+
+                            if (rdd_client.iteration_count >= rdd_client.robot_config.glob_param.iteration_num)
+                            {
+                                cout << "matrix file(s) execution complete" << endl;
+                                return 0;
+                            };
+                        };
+
+                        rdd_client.robot_config.device[dev_idx].param_wr_file[param_wr_idx].clear();
+                        rdd_client.robot_config.device[dev_idx].param_wr_file[param_wr_idx].seekg(0, ios::beg);
+                        if (!rdd_client.Set_Param_Wr_Data(dev_idx, param_wr_idx))
+                            return 0;
+                    }
+                    else
+                        return 0;
+                };
+
+                rdd_client.Send_Inst_Pkg(dev_idx, param_wr_idx);
+            };
+        };
+    }
 
     return 0;
 }
