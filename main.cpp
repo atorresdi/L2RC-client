@@ -93,6 +93,8 @@ int main()
                 };
 
                 rdd_client.Send_Inst_Pkg(dev_idx, param_wr_idx);
+                rdd_client.Send_Token();
+                rdd_client.Wait_Server_Response();
             };
         };
     }

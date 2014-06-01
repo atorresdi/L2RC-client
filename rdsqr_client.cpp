@@ -608,5 +608,54 @@ bool RDsqr_Client::Send_Inst_Pkg(uint8_t dev_idx, uint8_t param_wr_idx)
     return true;
 }
 
+bool RDsqr_Client::Wait_Server_Response()
+{
+    rpse.Wait();
+
+    if (rpse.Get_Type() == PROT_CMD)
+    {
+        if (rpse.Get_Cmd() != TOKEN)
+            cout << "Warning: command recieved other than TOKEN" << endl;
+    }
+    else if (rpse.Get_Type() == PROT_PKG)
+    {
+        if ( ((rpse.pkg.opts >> 6) & 0x03) ==  PRO_ERR_PKG)
+        {
+            uint8_t error = rpse.pkg.data[0];
+            cout << "Err: RDsquare server reports error from device id " << (int)rpse.pkg.ptsf << " -> ";
+
+            if( error & 0x01 )
+                cout << "input voltage error ";
+            if( error & 0x02 )
+                cout << "angle limit error ";
+            if( error & 0x04 )
+                cout << "overheating error ";
+            if( error & 0x08 )
+                cout << "range error ";
+            if( error & 0x10 )
+                cout << "checksum error ";
+            if( error & 0x20 )
+                cout << "overload error ";
+            if( error & 0x40 )
+                cout << "instruction error ";
+            if( error & 0x80 )
+                cout << "timeout error (non responding motor) ";
+
+            cout << endl;
+        }
+        else
+          cout << "Warning: command recieved other than ERROR" << endl;
+    };
+
+    return 1;
+}
+
+void RDsqr_Client::Send_Token()
+{
+    cmd.Set(TOKEN);
+    cmd.Send();
+}
+
+
 /* ------------------------------------ class: RDsqr_Client */
 

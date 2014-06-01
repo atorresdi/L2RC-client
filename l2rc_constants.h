@@ -17,6 +17,7 @@ const uint8_t SOH = 0x01;
 
 /* Commands */
 const uint8_t START = 0x73;
+const uint8_t TOKEN = 't';
 
 /* Message types */
 const uint8_t PROT_CTRL_CH = 0;
@@ -64,5 +65,6 @@ const uint8_t P_RDD_PARAM_RD_PER        = 9;
 /* Protocol packages types */
 const uint8_t PRO_CONFIG_PKG = 0;
 const uint8_t PRO_INSTR_PKG = 1;
+const uint8_t PRO_ERR_PKG = 2;
 
 #endif // L2RC_CONSTANTS_H

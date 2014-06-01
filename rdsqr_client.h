@@ -88,6 +88,8 @@ public:
 
     bool Set_Param_Wr_Data(uint8_t dev_idx, uint8_t param_wr_idx);
     bool Send_Inst_Pkg(uint8_t dev_idx, uint8_t param_wr_idx);
+    bool Wait_Server_Response();
+    void Send_Token();
 };
 
 

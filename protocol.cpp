@@ -322,10 +322,9 @@ void Response::Wait()
 
                 /* Wait for the package checksum */
                 while ( vcp.Read(&rx_data) <= 0 ) {};
-                cout << "cksum " << (int)pkg.Get_Cksum() << endl;
                 if (pkg.Get_Cksum() == rx_data)
                 {
-                    vcp.Write(ACK);         /* send ACK */      cout << "ACK sent" << endl;
+                    vcp.Write(ACK);         /* send ACK */
                     type = PROT_PKG;
                     pkg_sec_num++;
                     valid_reponse = 1;
